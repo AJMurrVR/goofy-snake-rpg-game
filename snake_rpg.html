@@ -1,68 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Snake RPG Ultra</title>
+    <title>Snake RPG Ultra - Fixed</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; touch-action: none; }
-        #menu { position: absolute; width: 100%; height: 100%; background: #1a1a1a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; }
         
-        /* HUD UI */
+        /* Main Menu Fix */
+        #menu { 
+            position: absolute; width: 100%; height: 100%; 
+            background: linear-gradient(45deg, #1a1a1a, #000); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            z-index: 1000; color: white; 
+        }
+
         #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
-        #stats { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; color: white; border-radius: 5px; }
-        #hotbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 5px; pointer-events: auto; }
-        .slot { width: 40px; height: 40px; border: 2px solid #555; margin: 2px; background: #222; color: white; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center; }
-
-        /* Inventory & Crafting */
-        #inventory-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 70%; background: rgba(30,30,30,0.95); border: 3px solid #555; display: none; z-index: 200; color: white; padding: 20px; overflow-y: auto; }
-        .craft-item { background: #444; padding: 10px; margin: 5px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
-
-        /* Mobile Controls */
-        #mobile-controls { position: absolute; bottom: 20px; right: 20px; display: none; pointer-events: auto; }
-        .m-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; margin: 5px; font-weight: bold; -webkit-user-select: none; }
-        #joystick-area { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; display: none; }
+        #stats { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 15px; color: white; border-radius: 10px; pointer-events: auto; }
         
-        button { cursor: pointer; padding: 10px 20px; margin: 5px; background: #2ecc71; border: none; color: white; font-weight: bold; border-radius: 4px; }
+        /* Buttons */
+        .menu-btn { 
+            background: #2ecc71; color: white; border: none; padding: 20px; 
+            margin: 10px; cursor: pointer; font-size: 18px; border-radius: 10px; 
+            width: 280px; transition: 0.2s; pointer-events: auto;
+        }
+        .menu-btn:hover { background: #27ae60; transform: scale(1.05); }
+
+        #inventory-screen { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 80%; max-width: 400px; background: rgba(20,20,20,0.95); 
+            display: none; z-index: 2000; color: white; padding: 20px; border-radius: 15px;
+        }
+
+        #mobile-controls { position: absolute; bottom: 30px; right: 30px; display: flex; pointer-events: auto; }
+        .m-btn { 
+            width: 70px; height: 70px; background: rgba(255,255,255,0.2); 
+            border-radius: 50%; color: white; display: flex; align-items: center; 
+            justify-content: center; margin: 10px; font-weight: bold; border: 2px solid white;
+        }
     </style>
 </head>
 <body>
 
     <div id="menu">
-        <h1>SNAKE RPG ULTRA</h1>
-        <button onclick="initGame('random')">PLAY RANDOM WORLD</button>
-        <button onclick="initGame('editor')">CREATE CUSTOM MAP</button>
+        <h1 style="font-size: 40px; color: #2ecc71;">SNAKE RPG ULTRA</h1>
+        <button class="menu-btn" onclick="window.initGame('random')">START RANDOM WORLD</button>
+        <button class="menu-btn" onclick="window.initGame('editor')" style="background:#3498db">CREATE CUSTOM MAP</button>
+        <p>WASD to Move | Space to Jump | Right Click to Attack</p>
     </div>
 
     <div id="hud">
         <div id="stats">
-            HP: <span id="hp-val">100</span> | Gold: <span id="gold-val">0</span><br>
-            <small>E: Inventory | Click: Attack | Space: Jump</small>
+            <b>HP:</b> <span id="hp-val">100</span> | <b>Gold:</b> <span id="gold-val">0</span><br>
+            <b>Items:</b> Iron (<span id="iron-val">0</span>) Wood (<span id="wood-val">0</span>)<br>
+            <button onclick="window.toggleInv()" style="margin-top:5px;">Open Crafting (E)</button>
         </div>
-        <div id="hotbar">
-            <div class="slot" id="slot0">Stick</div>
-            <div class="slot" id="slot1">Empty</div>
-            <div class="slot" id="slot2">Empty</div>
-        </div>
-        <div id="joystick-area"></div>
         <div id="mobile-controls">
-            <div class="m-btn" id="btn-jump">JUMP</div>
-            <div class="m-btn" id="btn-atk">ATK</div>
+            <div class="m-btn" ontouchstart="window.jump()">JUMP</div>
+            <div class="m-btn" ontouchstart="window.attack()" style="background:rgba(231, 76, 60, 0.5)">ATK</div>
         </div>
     </div>
 
     <div id="inventory-screen">
-        <h2>CRAFTING & INVENTORY</h2>
-        <div id="materials">Wood: 0 | Iron: 0</div>
-        <hr>
+        <h2>CRAFTING</h2>
         <div class="craft-item">
-            <span>Iron Sword (3 Iron, 1 Wood)</span>
-            <button onclick="craft('sword')">CRAFT</button>
+            <p>Iron Sword (3 Iron)</p>
+            <button class="menu-btn" style="width:100%" onclick="window.craft('sword')">CRAFT</button>
         </div>
-        <div class="craft-item">
-            <span>Heal Potion (10 Gold)</span>
-            <button onclick="craft('heal')">BUY</button>
-        </div>
-        <button style="background:red" onclick="toggleInv()">CLOSE</button>
+        <button class="menu-btn" style="background:#e74c3c; width:100%" onclick="window.toggleInv()">CLOSE</button>
     </div>
 
     <script type="importmap">
@@ -72,24 +76,35 @@
     <script type="module">
         import * as THREE from 'three';
 
-        let scene, camera, renderer, snake, isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        let scene, camera, renderer, snake;
         let health = 100, gold = 0, iron = 0, wood = 5;
         let isPlaying = false, isEditor = false, isInv = false;
         let vY = 0, isGrounded = true;
-        let monsters = [], blocks = [];
-        let moveVec = new THREE.Vector2();
+        let monsters = [];
 
-        function initGame(mode) {
+        // Attach functions to window so the HTML buttons can see them
+        window.initGame = function(mode) {
             document.getElementById('menu').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
-            if(isMobile) {
-                document.getElementById('joystick-area').style.display = 'block';
-                document.getElementById('mobile-controls').style.display = 'block';
-            }
             
+            setupScene();
+            
+            if(mode === 'random') {
+                createWorld();
+                isPlaying = true;
+            } else {
+                isEditor = true;
+                isPlaying = true; // Still allow movement in editor
+                createEmptyWorld();
+            }
+            animate();
+        };
+
+        function setupScene() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87ceeb);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
@@ -98,138 +113,121 @@
             light.position.set(10, 20, 10);
             scene.add(light, new THREE.AmbientLight(0xffffff, 0.5));
 
-            // Snake
-            snake = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1.5), new THREE.MeshStandardMaterial({color: 0x2ecc71}));
+            snake = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 1.5), 
+                new THREE.MeshStandardMaterial({color: 0x2ecc71})
+            );
             snake.position.y = 1;
             scene.add(snake);
-
-            if(mode === 'random') {
-                const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x27ae60}));
-                floor.rotation.x = -Math.PI/2;
-                scene.add(floor);
-                spawnRandomStuff();
-                isPlaying = true;
-            } else {
-                scene.background = new THREE.Color(0x000000); // Void
-                isEditor = true;
-            }
-
-            loop();
         }
 
-        function spawnRandomStuff() {
-            for(let i=0; i<20; i++) {
-                const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: 0xff0000}));
-                m.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
+        function createWorld() {
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({color: 0x27ae60}));
+            floor.rotation.x = -Math.PI/2;
+            scene.add(floor);
+            
+            for(let i=0; i<30; i++) {
+                const m = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0xff0000}));
+                m.position.set(Math.random()*200-100, 0.6, Math.random()*200-100);
                 scene.add(m);
                 monsters.push(m);
             }
         }
 
-        // --- INPUTS ---
-        const keys = {};
-        window.onkeydown = (e) => {
-            keys[e.key.toLowerCase()] = true;
-            if(e.key === 'e') toggleInv();
-            if(e.code === 'Space') jump();
-        };
-        window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
-        window.onmousedown = (e) => { 
-            if(isEditor) placeBlock(e);
-            else if(e.button === 2 || e.button === 0) attack(); 
-        };
-        window.oncontextmenu = (e) => e.preventDefault();
+        function createEmptyWorld() {
+            scene.background = new THREE.Color(0x000000);
+            const grid = new THREE.GridHelper(200, 200, 0xffffff, 0x444444);
+            scene.add(grid);
+        }
 
-        // Mobile Events
-        document.getElementById('btn-jump').ontouchstart = jump;
-        document.getElementById('btn-atk').ontouchstart = attack;
-
-        function jump() { if(isGrounded) { vY = 0.2; isGrounded = false; } }
-        
-        function attack() {
-            snake.scale.set(1.2, 1.2, 1.2);
+        // --- GAME ACTIONS ---
+        window.attack = function() {
+            snake.scale.set(1.5, 1.5, 1.5);
             setTimeout(() => snake.scale.set(1,1,1), 100);
+            
             monsters.forEach((m, i) => {
-                if(snake.position.distanceTo(m.position) < 3) {
+                if(snake.position.distanceTo(m.position) < 4) {
                     scene.remove(m);
                     monsters.splice(i, 1);
-                    gold += 5;
+                    gold += 10;
                     iron += 1;
                     updateUI();
                 }
             });
-        }
-
-        window.toggleInv = () => {
-            isInv = !isInv;
-            document.getElementById('inventory-screen').style.display = isInv ? 'block' : 'none';
-            document.getElementById('materials').innerText = `Wood: ${wood} | Iron: ${iron}`;
         };
 
-        window.craft = (item) => {
-            if(item === 'sword' && iron >= 3 && wood >= 1) {
-                iron -= 3; wood -= 1;
-                document.getElementById('slot1').innerText = "Iron Sword";
-                alert("Crafted Iron Sword!");
+        window.jump = function() {
+            if(isGrounded || isEditor) { vY = 0.25; isGrounded = false; }
+        };
+
+        window.toggleInv = function() {
+            isInv = !isInv;
+            document.getElementById('inventory-screen').style.display = isInv ? 'block' : 'none';
+        };
+
+        window.craft = function(type) {
+            if(type === 'sword' && iron >= 3) {
+                iron -= 3;
+                alert("Sword Crafted!");
+                updateUI();
             }
-            if(item === 'heal' && gold >= 10) {
-                gold -= 10; health = 100;
-            }
-            updateUI();
-            toggleInv();
         };
 
         function updateUI() {
             document.getElementById('hp-val').innerText = health;
             document.getElementById('gold-val').innerText = gold;
+            document.getElementById('iron-val').innerText = iron;
+            document.getElementById('wood-val').innerText = wood;
         }
 
-        function placeBlock(e) {
-            const ray = new THREE.Raycaster();
-            const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-            ray.setFromCamera(mouse, camera);
-            const intersects = ray.intersectObjects(scene.children);
-            
-            const b = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color: 0x555555}));
-            if(intersects.length > 0) {
-                b.position.copy(intersects[0].point).add(intersects[0].face.normal);
-            } else {
-                b.position.set(0, 0, -10).applyMatrix4(snake.matrixWorld);
-            }
-            b.position.y = 1;
-            scene.add(b);
-        }
+        // Controls
+        const keys = {};
+        window.onkeydown = (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if(e.key === 'e') window.toggleInv();
+            if(e.code === 'Space') window.jump();
+        };
+        window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
+        
+        window.onmousedown = (e) => {
+            if(e.button === 2 || e.button === 0) window.attack();
+        };
 
-        function loop() {
-            requestAnimationFrame(loop);
-            
-            if(!isInv) {
-                // Movement Logic
-                let dirX = 0, dirZ = 0;
-                if(keys['w']) dirZ = -0.2;
-                if(keys['s']) dirZ = 0.2;
+        function animate() {
+            requestAnimationFrame(animate);
+            if(!isInv && snake) {
+                if(keys['w']) snake.translateZ(-0.25);
+                if(keys['s']) snake.translateZ(0.2);
                 if(keys['a']) snake.rotation.y += 0.05;
                 if(keys['d']) snake.rotation.y -= 0.05;
 
-                snake.translateZ(dirZ);
-                
-                // Gravity
+                // Physics
                 snake.position.y += vY;
-                vY -= 0.01;
-                if(snake.position.y <= 1) {
-                    snake.position.y = 1;
-                    vY = 0;
-                    isGrounded = true;
+                if(!isEditor) {
+                    vY -= 0.01;
+                    if(snake.position.y <= 1) {
+                        snake.position.y = 1;
+                        vY = 0;
+                        isGrounded = true;
+                    }
+                } else {
+                    vY *= 0.9; // Float effect in editor
                 }
 
-                // Cam follow
-                const camOffset = new THREE.Vector3(0, 5, 10).applyMatrix4(snake.matrixWorld);
+                const camOffset = new THREE.Vector3(0, 6, 12).applyMatrix4(snake.matrixWorld);
                 camera.position.lerp(camOffset, 0.1);
                 camera.lookAt(snake.position);
             }
-
             renderer.render(scene, camera);
         }
+
+        window.onresize = () => {
+            if(camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        };
     </script>
 </body>
 </html>
