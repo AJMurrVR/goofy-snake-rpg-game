@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snake RPG: Open World</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Courier New', Courier, monospace; background: #000; }
+        #gui { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.7); padding: 15px; border: 2px solid #555; pointer-events: none; }
+        #shop, #editor-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; color: #fff; padding: 20px; border: 4px solid gold; display: none; text-align: center; width: 300px; }
+        #save-menu { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); padding: 10px; color: white; }
+        .btn { background: #444; color: white; border: 1px solid #888; padding: 5px; margin: 5px; cursor: pointer; pointer-events: auto; }
+        .btn:hover { background: #666; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border: 1px solid white; transform: translate(-50%, -50%); display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="gui">
+        <b style="font-size: 20px;">SNAKE RPG 3D</b><br>
+        Health: <span id="hp">100</span> | Points: <span id="pts">0</span><br>
+        WASD to Move | P for Shop | E for Editor
+    </div>
+
+    <div id="save-menu">
+        <b>Save Slots</b><br>
+        <button class="btn" onclick="saveGame(1)">Slot 1</button>
+        <button class="btn" onclick="saveGame(2)">Slot 2</button><br>
+        <button class="btn" onclick="loadGame(1)">Load 1</button>
+        <button class="btn" onclick="loadGame(2)">Load 2</button>
+    </div>
+
+    <div id="shop">
+        <h2>GOBLIN SHOP</h2>
+        <p>Points: <span id="shop-pts">0</span></p>
+        <button class="btn" onclick="buy('speed')">Buy Speed (10 Pts)</button><br>
+        <button class="btn" onclick="buy('hp')">Buy Health (5 Pts)</button><br>
+        <button class="btn" onclick="toggleShop()">Close</button>
+    </div>
+
+    <div id="editor-ui">
+        <h2>MAP EDITOR</h2>
+        <input type="text" id="map-code" placeholder="Paste Code Here">
+        <button class="btn" onclick="importMap()">Load Code</button><br>
+        <button class="btn" onclick="exportMap()">Generate Code</button><br>
+        <p id="code-output" style="font-size: 10px; word-break: break-all;"></p>
+        <button class="btn" onclick="toggleEditor()">Exit Editor</button>
+    </div>
+
+    <div id="crosshair"></div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- CORE VARIABLES ---
+        let points = 0;
+        let health = 100;
+        let speed = 0.15;
+        let isShopOpen = false;
+        let isEditorMode = false;
+        let snakeBody = [];
+        let mapObjects = [];
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // --- WORLD GEN ---
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(10, 20, 10);
+        scene.add(sun);
+
+        // Ground Zones
+        function createFloor(x, z, color, size=50) {
+            const geo = new THREE.PlaneGeometry(size, size);
+            const mat = new THREE.MeshStandardMaterial({ color: color });
+            const floor = new THREE.Mesh(geo, mat);
+            floor.rotation.x = -Math.PI/2;
+            floor.position.set(x, 0, z);
+            scene.add(floor);
+        }
+        createFloor(0, 0, 0x228b22);    // Grass Zone
+        createFloor(50, 0, 0xedc9af);   // Desert Zone
+        createFloor(0, -50, 0x440000);  // Boss Castle Zone
+
+        // --- SNAKE PLAYER ---
+        const headGeo = new THREE.BoxGeometry(1, 1, 1);
+        const headMat = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const snakeHead = new THREE.Mesh(headGeo, headMat);
+        snakeHead.position.y = 0.5;
+        scene.add(snakeHead);
+        
+        // --- ENEMIES & BOSS ---
+        const monsters = [];
+        function spawnMonster(x, z, size=1, isBoss=false) {
+            const mGeo = new THREE.BoxGeometry(size, size*2, size);
+            const mMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0xff0000 : 0x0000ff });
+            const m = new THREE.Mesh(mGeo, mMat);
+            m.position.set(x, size, z);
+            scene.add(m);
+            monsters.push({ mesh: m, isBoss: isBoss });
+        }
+        spawnMonster(10, 10);
+        spawnMonster(-10, 5);
+        spawnMonster(0, -60, 5, true); // THE BOSS
+
+        // --- CONTROLS ---
+        const keys = {};
+        window.onkeydown = (e) => { 
+            keys[e.key.toLowerCase()] = true; 
+            if(e.key === 'p') toggleShop();
+            if(e.key === 'e') toggleEditor();
+        };
+        window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
+
+        // --- FUNCTIONS ---
+        window.toggleShop = () => {
+            isShopOpen = !isShopOpen;
+            document.getElementById('shop').style.display = isShopOpen ? 'block' : 'none';
+            document.getElementById('shop-pts').innerText = points;
+        };
+
+        window.toggleEditor = () => {
+            isEditorMode = !isEditorMode;
+            document.getElementById('editor-ui').style.display = isEditorMode ? 'block' : 'none';
+            document.getElementById('crosshair').style.display = isEditorMode ? 'block' : 'none';
+        };
+
+        window.buy = (item) => {
+            if (item === 'speed' && points >= 10) { points -= 10; speed += 0.05; }
+            if (item === 'hp' && points >= 5) { points -= 5; health = 100; }
+            updateUI();
+        };
+
+        function updateUI() {
+            document.getElementById('hp').innerText = Math.ceil(health);
+            document.getElementById('pts').innerText = points;
+        }
+
+        // --- EDITOR INTERACTION ---
+        const raycaster = new THREE.Raycaster();
+        window.onclick = () => {
+            if(!isEditorMode) return;
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            if(intersects.length > 0) {
+                const pt = intersects[0].point;
+                const wallGeo = new THREE.BoxGeometry(2, 2, 2);
+                const wallMat = new THREE.MeshStandardMaterial({color: 0x000000});
+                const wall = new THREE.Mesh(wallGeo, wallMat);
+                wall.position.set(Math.round(pt.x), 1, Math.round(pt.z));
+                scene.add(wall);
+                mapObjects.push({x: wall.position.x, z: wall.position.z});
+            }
+        };
+
+        window.exportMap = () => {
+            const code = btoa(JSON.stringify(mapObjects));
+            document.getElementById('code-output').innerText = code;
+        };
+
+        window.importMap = () => {
+            const code = document.getElementById('map-code').value;
+            const data = JSON.parse(atob(code));
+            data.forEach(obj => {
+                const wallGeo = new THREE.BoxGeometry(2, 2, 2);
+                const wall = new THREE.Mesh(wallGeo, new THREE.MeshStandardMaterial({color:0x000000}));
+                wall.position.set(obj.x, 1, obj.z);
+                scene.add(wall);
+            });
+        };
+
+        // --- SAVE/LOAD ---
+        window.saveGame = (slot) => {
+            const data = { points, health, speed, x: snakeHead.position.x, z: snakeHead.position.z };
+            localStorage.setItem('snake_save_'+slot, JSON.stringify(data));
+            alert("Saved to Slot " + slot);
+        };
+        window.loadGame = (slot) => {
+            const data = JSON.parse(localStorage.getItem('snake_save_'+slot));
+            if(data) {
+                points = data.points; health = data.health; speed = data.speed;
+                snakeHead.position.set(data.x, 0.5, data.z);
+                updateUI();
+            }
+        };
+
+        // --- GAME LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isShopOpen && !isEditorMode) {
+                // Movement
+                if (keys['w']) snakeHead.position.z -= speed;
+                if (keys['s']) snakeHead.position.z += speed;
+                if (keys['a']) snakeHead.position.x -= speed;
+                if (keys['d']) snakeHead.position.x += speed;
+
+                // Camera follow
+                camera.position.lerp(new THREE.Vector3(snakeHead.position.x, 10, snakeHead.position.z + 10), 0.1);
+                camera.lookAt(snakeHead.position);
+
+                // Monster Collision
+                monsters.forEach(m => {
+                    const dist = snakeHead.position.distanceTo(m.mesh.position);
+                    if (dist < 2) health -= m.isBoss ? 0.5 : 0.1;
+                    
+                    // Simple AI: Follow player if close
+                    if(dist < 15) {
+                        m.mesh.position.lerp(snakeHead.position, m.isBoss ? 0.01 : 0.02);
+                        m.mesh.position.y = m.isBoss ? 5 : 1; 
+                    }
+                });
+
+                if (health <= 0) {
+                    alert("GAME OVER! Points: " + points);
+                    health = 100; points = 0;
+                    snakeHead.position.set(0, 0.5, 0);
+                }
+                updateUI();
+            } else if (isEditorMode) {
+                // Free cam in editor
+                if (keys['w']) camera.position.z -= 0.5;
+                if (keys['s']) camera.position.z += 0.5;
+                if (keys['a']) camera.position.x -= 0.5;
+                if (keys['d']) camera.position.x += 0.5;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Spawn some initial apples
+        for(let i=0; i<20; i++) {
+            const aGeo = new THREE.SphereGeometry(0.5);
+            const aMat = new THREE.MeshStandardMaterial({color: 0xff0000});
+            const apple = new THREE.Mesh(aGeo, aMat);
+            apple.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
+            scene.add(apple);
+            // Simple collection logic
+            setInterval(() => {
+                if(snakeHead.position.distanceTo(apple.position) < 1.5) {
+                    apple.position.set(Math.random()*100-50, 0.5, Math.random()*100-50);
+                    points += 1;
+                    updateUI();
+                }
+            }, 100);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
