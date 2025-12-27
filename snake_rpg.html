@@ -1,52 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Snake RPG: Final Edition</title>
+    <title>Snake RPG: Pro Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; touch-action: none; }
         #menu { position: absolute; width: 100%; height: 100%; background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; color: white; }
+        
+        /* HUD & Health */
         #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
-        #stats { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 15px; color: white; border-radius: 10px; pointer-events: auto; border: 1px solid #2ecc71; }
-        .menu-btn { background: #2ecc71; color: white; border: none; padding: 20px; margin: 10px; cursor: pointer; font-size: 18px; border-radius: 10px; width: 280px; }
-        #inventory-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(20,20,20,0.95); display: none; z-index: 2000; color: white; padding: 20px; border-radius: 15px; border: 2px solid gold; }
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; pointer-events: auto; }
-        .slot { width: 50px; height: 50px; background: rgba(0,0,0,0.7); border: 2px solid #555; margin: 5px; color: white; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-        #mobile-btns { position: absolute; bottom: 30px; right: 30px; display: flex; pointer-events: auto; }
-        .m-btn { width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; margin: 10px; border: 2px solid white; }
+        #health-container { position: absolute; top: 20px; left: 20px; width: 200px; height: 20px; background: #444; border: 2px solid #fff; pointer-events: auto; }
+        #health-bar { width: 100%; height: 100%; background: #ff4757; transition: width 0.3s; }
+        
+        /* Unity-Style Editor */
+        #inspector { position: absolute; top: 0; right: 0; width: 200px; height: 100%; background: rgba(30,30,30,0.9); color: white; padding: 15px; display: none; pointer-events: auto; border-left: 2px solid #555; }
+        
+        /* Inventory Icons */
+        #inventory-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: #222; display: none; z-index: 2000; color: white; padding: 20px; border: 2px solid #2ecc71; border-radius: 10px; }
+        .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+        .inv-slot { background: #333; border: 1px solid #555; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; }
+        .icon { font-size: 30px; margin-bottom: 5px; }
+
+        .menu-btn { background: #2ecc71; color: white; border: none; padding: 15px; margin: 5px; cursor: pointer; border-radius: 5px; width: 100%; }
     </style>
 </head>
 <body>
 
     <div id="menu">
-        <h1 style="color: #2ecc71;">SNAKE RPG 3D</h1>
-        <button class="menu-btn" onclick="initGame('random')">PLAY RANDOM WORLD</button>
-        <button class="menu-btn" onclick="initGame('editor')" style="background:#3498db">CREATE MAP (EDITOR)</button>
+        <h1>SNAKE RPG PRO</h1>
+        <button class="menu-btn" style="width:250px" onclick="initGame('play')">ENTER OVERWORLD</button>
+        <button class="menu-btn" style="width:250px; background:#3498db" onclick="initGame('editor')">UNITY EDITOR MODE</button>
     </div>
 
     <div id="hud">
-        <div id="stats">
-            HP: <span id="hp-val">100</span> | Gold: <span id="gold-val">0</span><br>
-            Length: <span id="len-val">1</span>
-        </div>
-        <div id="hotbar">
-            <div class="slot">Sword</div><div class="slot">Apple</div><div class="slot">Block</div>
-        </div>
-        <div id="mobile-btns">
-            <div class="m-btn" ontouchstart="jump()">JUMP</div>
-            <div class="m-btn" ontouchstart="attack()" style="background:red">ATK</div>
-            <div class="m-btn" ontouchstart="toggleInv()">INV</div>
+        <div id="health-container"><div id="health-bar"></div></div>
+        <div style="position:absolute; top:50px; left:20px; color:white;">Gold: <span id="gold-txt">0</span></div>
+        
+        <div style="position:absolute; bottom:30px; right:30px; pointer-events:auto; display:flex;">
+            <div onclick="jump()" style="width:70px; height:70px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; margin:10px;">JUMP</div>
+            <div onclick="attack()" style="width:70px; height:70px; background:rgba(255,71,87,0.5); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; margin:10px;">ATK</div>
         </div>
     </div>
 
+    <div id="inspector">
+        <h3>Inspector</h3>
+        <p>Selected: <span id="obj-name">None</span></p>
+        <label>Pos X</label><input type="number" id="pos-x" step="0.5" oninput="updateObj()"><br>
+        <label>Pos Y</label><input type="number" id="pos-y" step="0.5" oninput="updateObj()"><br>
+        <label>Pos Z</label><input type="number" id="pos-z" step="0.5" oninput="updateObj()"><br>
+        <button onclick="deleteObj()" style="background:red; color:white; margin-top:10px; width:100%;">Delete</button>
+    </div>
+
     <div id="inventory-screen">
-        <h2>INVENTORY</h2>
-        <ul id="inv-list">
-            <li>Wooden Sword (Equipped)</li>
-            <li>Apples: <span id="inv-apples">0</span></li>
-            <li>Gold: <span id="inv-gold">0</span></li>
-        </ul>
-        <button class="menu-btn" style="width:100%; background:#e74c3c" onclick="toggleInv()">CLOSE</button>
+        <h2>Inventory (E)</h2>
+        <div class="inv-grid">
+            <div class="inv-slot"><div class="icon">🍎</div>Apples: <span id="inv-apple-count">0</span></div>
+            <div class="inv-slot"><div class="icon">⚔️</div>Sword: 1</div>
+            <div class="inv-slot"><div class="icon">🪙</div>Gold: <span id="inv-gold-count">0</span></div>
+        </div>
+        <button class="menu-btn" style="background:#e74c3c; margin-top:20px;" onclick="toggleInv()">CLOSE</button>
     </div>
 
     <script type="importmap">
@@ -57,152 +69,184 @@
         import * as THREE from 'three';
 
         let scene, camera, renderer, snakeHead;
-        let bodySegments = [], snakeHistory = [];
-        let health = 100, gold = 0, apples = 0;
         let isPlaying = false, isEditor = false, isInv = false;
-        let vY = 0, isGrounded = true;
-        let monsters = [], interactables = [];
-        let keys = {};
+        let hp = 100, gold = 0, apples = 0;
+        let selectedObj = null;
+        let worldItems = [], bosses = [];
+        let bodySegments = [], snakeHistory = [];
+        let vY = 0, keys = {};
 
         window.initGame = (mode) => {
             document.getElementById('menu').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
-            setupBase();
-            if(mode === 'random') startRandom(); else startEditor();
-            animate();
-        };
-
-        function setupBase() {
+            
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87ceeb);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
+            
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            let sun = new THREE.DirectionalLight(0xffffff, 1);
+            sun.position.set(10, 50, 10);
+            scene.add(sun);
 
-            // Create Snake Head
             snakeHead = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({color: 0x2ecc71}));
             snakeHead.position.y = 1;
             scene.add(snakeHead);
-        }
 
-        function startRandom() {
-            // Massive Floor
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({color: 0x27ae60}));
+            if(mode === 'play') {
+                createBiomes();
+                isPlaying = true;
+            } else {
+                isEditor = true;
+                document.getElementById('inspector').style.display = 'block';
+                scene.add(new THREE.GridHelper(200, 20));
+            }
+            animate();
+        };
+
+        function createBiomes() {
+            // Forest
+            spawnBiome(-200, 0, 0x27ae60, "Forest");
+            // Desert
+            spawnBiome(200, 0, 0xedc9af, "Desert");
+            
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({color: 0x333333}));
             floor.rotation.x = -Math.PI/2;
             scene.add(floor);
+        }
 
-            // Spawn Structures (Villages)
-            for(let i=0; i<15; i++) {
-                let house = new THREE.Mesh(new THREE.BoxGeometry(10, 8, 10), new THREE.MeshStandardMaterial({color: 0x8b4513}));
-                house.position.set(Math.random()*800-400, 4, Math.random()*800-400);
-                scene.add(house);
+        function spawnBiome(x, z, color, name) {
+            let grass = new THREE.Mesh(new THREE.CircleGeometry(150, 32), new THREE.MeshStandardMaterial({color: color}));
+            grass.rotation.x = -Math.PI/2; grass.position.set(x, 0.01, z);
+            scene.add(grass);
+
+            // 45% Chance for Castle
+            if(Math.random() < 0.45) {
+                spawnCastle(x, z);
             }
 
             // Spawn Apples
-            for(let i=0; i<50; i++) spawnApple();
+            for(let i=0; i<15; i++) {
+                let a = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0xff0000}));
+                a.position.set(x + Math.random()*100-50, 0.5, z + Math.random()*100-50);
+                scene.add(a);
+                worldItems.push({mesh: a, type: 'apple'});
+            }
+        }
+
+        function spawnCastle(x, z) {
+            let castle = new THREE.Mesh(new THREE.BoxGeometry(20, 30, 20), new THREE.MeshStandardMaterial({color: 0x444444}));
+            castle.position.set(x, 15, z);
+            scene.add(castle);
             
-            isPlaying = true;
+            let boss = new THREE.Mesh(new THREE.BoxGeometry(4, 8, 4), new THREE.MeshStandardMaterial({color: 0x9b59b6}));
+            boss.position.set(x, 4, z + 15);
+            scene.add(boss);
+            bosses.push({mesh: boss, hp: 100});
         }
 
-        function startEditor() {
-            isEditor = true;
-            isPlaying = true;
-            scene.background = new THREE.Color(0x000000);
-            scene.add(new THREE.GridHelper(200, 50, 0xffffff, 0x333333));
-        }
-
-        function spawnApple() {
-            const apple = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0xff0000}));
-            apple.position.set(Math.random()*400-200, 0.5, Math.random()*400-200);
-            scene.add(apple);
-            interactables.push({mesh: apple, type: 'apple'});
-        }
-
-        window.jump = () => { if(isGrounded) vY = 0.3; isGrounded = false; };
+        // --- CORE ACTIONS ---
+        window.jump = () => { if(snakeHead.position.y <= 1.1) vY = 0.3; };
         window.attack = () => {
             snakeHead.scale.set(1.5, 1.5, 1.5);
-            setTimeout(() => snakeHead.scale.set(1,1,1), 100);
+            setTimeout(() => snakeHead.scale.set(1, 1, 1), 100);
+            bosses.forEach((b, i) => {
+                if(snakeHead.position.distanceTo(b.mesh.position) < 8) {
+                    b.hp -= 20;
+                    if(b.hp <= 0) { scene.remove(b.mesh); bosses.splice(i, 1); gold += 100; }
+                }
+            });
         };
+
         window.toggleInv = () => {
             isInv = !isInv;
             document.getElementById('inventory-screen').style.display = isInv ? 'block' : 'none';
-            document.getElementById('inv-apples').innerText = apples;
-            document.getElementById('inv-gold').innerText = gold;
+            document.getElementById('inv-apple-count').innerText = apples;
+            document.getElementById('inv-gold-count').innerText = gold;
         };
 
-        // Editor Placement
-        window.addEventListener('mousedown', (e) => {
-            if(!isEditor || isInv) return;
-            const ray = new THREE.Raycaster();
+        // --- EDITOR LOGIC ---
+        window.onclick = (e) => {
+            if(!isEditor) return;
             const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
+            const ray = new THREE.Raycaster();
             ray.setFromCamera(mouse, camera);
             const hits = ray.intersectObjects(scene.children);
-
-            if(e.button === 0) { // Left Click Place
-                const b = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color: 0x555555}));
-                if(hits.length > 0) b.position.copy(hits[0].point).add(hits[0].face.normal);
-                else b.position.set(snakeHead.position.x, 1, snakeHead.position.z - 5);
-                b.position.x = Math.round(b.position.x / 2) * 2;
-                b.position.z = Math.round(b.position.z / 2) * 2;
-                b.userData.isBlock = true;
-                scene.add(b);
+            if(hits.length > 0 && hits[0].object !== snakeHead) {
+                selectedObj = hits[0].object;
+                document.getElementById('obj-name').innerText = "Object";
+                document.getElementById('pos-x').value = selectedObj.position.x;
+                document.getElementById('pos-y').value = selectedObj.position.y;
+                document.getElementById('pos-z').value = selectedObj.position.z;
             }
-        });
-
-        window.onkeydown = (e) => { 
-            keys[e.key.toLowerCase()] = true; 
-            if(e.key === 'e') toggleInv();
-            if(e.code === 'Space') jump();
         };
+
+        window.updateObj = () => {
+            if(!selectedObj) return;
+            selectedObj.position.x = parseFloat(document.getElementById('pos-x').value);
+            selectedObj.position.y = parseFloat(document.getElementById('pos-y').value);
+            selectedObj.position.z = parseFloat(document.getElementById('pos-z').value);
+        };
+
+        window.deleteObj = () => { if(selectedObj) { scene.remove(selectedObj); selectedObj = null; } };
+
+        window.onkeydown = (e) => { keys[e.key.toLowerCase()] = true; if(e.key === 'e') toggleInv(); };
         window.onkeyup = (e) => keys[e.key.toLowerCase()] = false;
 
         function animate() {
             requestAnimationFrame(animate);
             if(isPlaying && !isInv) {
-                // Movement
-                if(keys['w']) snakeHead.translateZ(-0.3);
-                if(keys['s']) snakeHead.translateZ(0.2);
-                if(keys['a']) snakeHead.rotation.y += 0.06;
-                if(keys['d']) snakeHead.rotation.y -= 0.06;
+                if(keys['w']) snakeHead.translateZ(-0.35);
+                if(keys['s']) snakeHead.translateZ(0.25);
+                if(keys['a']) snakeHead.rotation.y += 0.05;
+                if(keys['d']) snakeHead.rotation.y -= 0.05;
 
-                // Jump Physics
                 snakeHead.position.y += vY;
                 vY -= 0.015;
-                if(snakeHead.position.y <= 1) { snakeHead.position.y = 1; vY = 0; isGrounded = true; }
+                if(snakeHead.position.y < 1) { snakeHead.position.y = 1; vY = 0; }
 
-                // Snake Body Logic
-                snakeHistory.unshift(new THREE.Vector3().copy(snakeHead.position));
-                if(snakeHistory.length > 100) snakeHistory.pop();
+                // Boss AI
+                bosses.forEach(b => {
+                    let dist = b.mesh.position.distanceTo(snakeHead.position);
+                    if(dist < 30) b.mesh.position.lerp(snakeHead.position, 0.01);
+                    if(dist < 3) { hp -= 0.5; document.getElementById('health-bar').style.width = hp + "%"; }
+                });
 
-                for(let i=0; i<bodySegments.length; i++) {
-                    const pos = snakeHistory[(i + 1) * 10];
-                    if(pos) bodySegments[i].position.lerp(pos, 0.2);
-                }
-
-                // Apple Collection
-                interactables.forEach((item, idx) => {
+                // Eat Apples
+                worldItems.forEach((item, i) => {
                     if(snakeHead.position.distanceTo(item.mesh.position) < 2) {
                         scene.remove(item.mesh);
-                        interactables.splice(idx, 1);
+                        worldItems.splice(i, 1);
                         apples++;
+                        hp = Math.min(100, hp + 10);
+                        document.getElementById('health-bar').style.width = hp + "%";
                         growSnake();
-                        document.getElementById('len-val').innerText = bodySegments.length + 1;
                     }
                 });
 
-                // Camera follow
-                const offset = new THREE.Vector3(0, 10, 20).applyMatrix4(snakeHead.matrixWorld);
-                camera.position.lerp(offset, 0.1);
+                // Follow Camera
+                let camPos = new THREE.Vector3(0, 15, 25).applyMatrix4(snakeHead.matrixWorld);
+                camera.position.lerp(camPos, 0.1);
                 camera.lookAt(snakeHead.position);
+
+                // Update Snake Body
+                snakeHistory.unshift(new THREE.Vector3().copy(snakeHead.position));
+                if(snakeHistory.length > 200) snakeHistory.pop();
+                bodySegments.forEach((seg, i) => {
+                    let pos = snakeHistory[(i + 1) * 12];
+                    if(pos) seg.position.lerp(pos, 0.25);
+                });
             }
+            document.getElementById('gold-txt').innerText = gold;
             renderer.render(scene, camera);
         }
 
         function growSnake() {
-            const seg = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: 0x27ae60}));
-            seg.position.copy(snakeHead.position);
+            let seg = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({color: 0x27ae60}));
             scene.add(seg);
             bodySegments.push(seg);
         }
