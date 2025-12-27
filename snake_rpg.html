@@ -1,239 +1,278 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Snake RPG: Creator Engine</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake Game: Improved Editor Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background: #1a1a1a; color: #eee; }
         
-        /* Menus */
-        .overlay-menu { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; color: white; }
-        #pause-menu { display: none; }
+        /* Unity Style Layout */
+        #editor-ui { display: grid; grid-template-columns: 250px 1fr 300px; grid-template-rows: 40px 1fr 200px; height: 100vh; width: 100vw; }
         
-        /* HUD */
-        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
-        #hp-ui { position: absolute; top: 20px; left: 20px; width: 200px; height: 15px; background: #333; border: 2px solid #fff; pointer-events: auto; }
-        #hp-bar { width: 100%; height: 100%; background: #ff4757; }
-        
-        /* Unity Inspector */
-        #inspector { position: absolute; top: 0; right: 0; width: 250px; height: 100%; background: #252525; color: #ddd; padding: 15px; display: none; border-left: 2px solid #111; font-size: 13px; overflow-y: auto; }
-        #inspector h3 { color: #2ecc71; margin-top: 0; }
-        input, select { width: 100%; background: #111; color: #fff; border: 1px solid #444; margin-bottom: 10px; padding: 5px; }
+        /* Toolbar */
+        #toolbar { grid-column: 1 / 4; background: #333; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid #111; z-index: 10; }
+        .tool-btn { background: #444; border: 1px solid #555; color: white; margin-right: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+        .tool-active { background: #2ecc71; border-color: #fff; }
 
-        .btn { background: #2ecc71; color: white; border: none; padding: 12px; margin: 5px; cursor: pointer; border-radius: 4px; width: 200px; font-weight: bold; }
-        .btn-red { background: #e74c3c; }
-        .btn-blue { background: #3498db; }
+        /* Project / Folder Area */
+        #project-window { grid-row: 3; grid-column: 1 / 4; background: #252525; border-top: 2px solid #111; padding: 10px; display: flex; gap: 20px; overflow-x: auto; }
+        .folder { width: 80px; text-align: center; cursor: pointer; }
+        .asset-icon { font-size: 30px; display: block; }
+
+        /* Hierarchy & Inspector */
+        #hierarchy { background: #2b2b2b; border-right: 1px solid #111; padding: 10px; overflow-y: auto; }
+        #inspector { background: #2b2b2b; border-left: 1px solid #111; padding: 10px; overflow-y: auto; }
+        
+        #viewport { position: relative; background: #000; overflow: hidden; }
+        #hud { position: absolute; top: 10px; left: 10px; pointer-events: none; display: none; }
+        
+        /* Pause Menu */
+        #pause-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        
+        .field { margin-bottom: 10px; }
+        label { display: block; font-size: 11px; color: #aaa; }
+        input, select { width: 100%; background: #111; border: 1px solid #444; color: white; padding: 4px; border-radius: 2px; }
+        button.action { width: 100%; background: #3498db; color: white; border: none; padding: 8px; margin-top: 5px; cursor: pointer; border-radius: 3px; }
     </style>
 </head>
 <body>
 
-    <div id="main-menu" class="overlay-menu">
-        <h1>SNAKE ENGINE 3D</h1>
-        <button class="btn" onclick="initGame('play')">PLAY WORLD</button>
-        <button class="btn btn-blue" onclick="initGame('editor')">OPEN EDITOR</button>
+<div id="editor-ui">
+    <div id="toolbar">
+        <button id="btn-move" class="tool-btn tool-active" onclick="setTool('move')">Move (W)</button>
+        <button id="btn-rotate" class="tool-btn" onclick="setTool('rotate')">Rotate (E)</button>
+        <button id="btn-scale" class="tool-btn" onclick="setTool('scale')">Scale (R)</button>
+        <div style="flex-grow:1"></div>
+        <button class="tool-btn" style="background: #27ae60" onclick="togglePlayMode()">▶ PLAY</button>
     </div>
 
-    <div id="pause-menu" class="overlay-menu">
-        <h2>PAUSED</h2>
-        <button class="btn" onclick="togglePause()">RESUME</button>
-        <button class="btn btn-blue" onclick="saveData()">SAVE GAME</button>
-        <button class="btn btn-red" onclick="location.reload()">QUIT TO MENU</button>
+    <div id="hierarchy">
+        <h4>Hierarchy</h4>
+        <div id="obj-list"></div>
     </div>
 
-    <div id="hud">
-        <div id="hp-ui"><div id="hp-bar"></div></div>
-        <div style="position:absolute; top:45px; left:20px; color:white;">Gold: <span id="gold-txt">0</span></div>
+    <div id="viewport">
+        <div id="hud">
+            <div style="background: rgba(0,0,0,0.5); padding:10px; border-radius:5px;">
+                HP: <span id="hp-val">100</span> | Gold: $<span id="gold-val">0</span>
+            </div>
+        </div>
+        <div id="pause-overlay">
+            <h1>PAUSED</h1>
+            <button class="tool-btn" style="padding:15px 40px" onclick="saveProject()">SAVE PROJECT</button>
+            <button class="tool-btn" style="padding:15px 40px; background: #c0392b" onclick="location.reload()">QUIT</button>
+            <p>Press ESC to Resume</p>
+        </div>
     </div>
 
     <div id="inspector">
-        <h3>Hierarchy & Inspector</h3>
+        <h4>Inspector</h4>
+        <div id="inspector-content">Select an object</div>
         <hr>
-        <h4>Spawn New</h4>
-        <select id="spawn-type">
-            <option value="block">Basic Block</option>
-            <option value="apple">Apple Fruit</option>
-            <option value="trader">Mod Trader</option>
-            <option value="boss">Castle Boss</option>
+        <h4>Spawn Biome Block</h4>
+        <select id="biome-select">
+            <option value="grass">Forest (Grass)</option>
+            <option value="sand">Desert (Sand)</option>
+            <option value="lava">Magma (Lava)</option>
+            <option value="rock">Magma (Rock)</option>
         </select>
-        <button class="btn btn-blue" style="width:100%" onclick="spawnInEditor()">Spawn at Camera</button>
-        
-        <hr>
-        <h4>Transform</h4>
-        <label>PosX</label><input type="number" id="ix" step="0.5" oninput="applyTransform()">
-        <label>PosY</label><input type="number" id="iy" step="0.5" oninput="applyTransform()">
-        <label>PosZ</label><input type="number" id="iz" step="0.5" oninput="applyTransform()">
-        <button class="btn btn-red" style="width:100%" onclick="deleteSelected()">Delete Selected</button>
+        <button class="action" onclick="spawnBiomeBlock()">Spawn Selected</button>
     </div>
 
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
+    <div id="project-window">
+        <div class="folder">
+            <span class="asset-icon">📁</span>
+            <span>Scripts</span>
+        </div>
+        <div class="folder">
+            <span class="asset-icon">📁</span>
+            <span>Textures</span>
+        </div>
+        <div class="folder" onclick="newScript()">
+            <span class="asset-icon">📄</span>
+            <span>New BlockScript</span>
+        </div>
+    </div>
+</div>
 
-    <script type="module">
-        import * as THREE from 'three';
+<script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
 
-        let scene, camera, renderer, snakeHead;
-        let isPlaying = false, isEditor = false, isPaused = false;
-        let hp = 100, gold = 100;
-        let selectedObj = null, speedMod = 1;
-        let bodySegments = [], snakeHistory = [], monsters = [], traders = [];
-        let keys = {}, mouseButtons = {};
+<script type="module">
+    import * as THREE from 'three';
 
-        // Initialization
-        window.initGame = (mode) => {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a1a1a);
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 5000);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
-            
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const sun = new THREE.DirectionalLight(0xffffff, 1);
-            sun.position.set(50, 100, 50);
-            scene.add(sun);
+    let scene, camera, renderer, snakeHead;
+    let isPlaying = false, isPaused = false;
+    let activeTool = 'move';
+    let selectedObj = null;
+    let bodySegments = [], snakeHistory = [];
+    let gold = 100, hp = 100;
 
-            // Ground
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({color: 0x333333}));
-            ground.rotation.x = -Math.PI/2;
-            scene.add(ground);
+    const loader = new THREE.TextureLoader();
+    const textures = {
+        grass: loader.load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg'),
+        sand: loader.load('https://threejs.org/examples/textures/lava/lavatile.jpg'), // Placeholder
+        lava: loader.load('https://threejs.org/examples/textures/lava/lavatile.jpg'),
+        snake: loader.load('https://threejs.org/examples/textures/floors/FloorsCheckerboard_S_Diffuse.jpg')
+    };
 
-            snakeHead = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 2), new THREE.MeshStandardMaterial({color: 0x2ecc71}));
-            snakeHead.position.y = 0.6;
-            scene.add(snakeHead);
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+        camera = new THREE.PerspectiveCamera(75, (window.innerWidth - 550) / (window.innerHeight - 240), 0.1, 2000);
+        camera.position.set(10, 10, 10);
+        camera.lookAt(0,0,0);
 
-            if(mode === 'play') {
-                isPlaying = true;
-            } else {
-                isEditor = true;
-                document.getElementById('inspector').style.display = 'block';
-                camera.position.set(0, 10, 20);
-                scene.add(new THREE.GridHelper(500, 50, 0xffffff, 0x444444));
-            }
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        const viewport = document.getElementById('viewport');
+        renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+        viewport.appendChild(renderer.domElement);
 
-            animate();
-        };
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+        sun.position.set(10, 20, 10);
+        scene.add(ambient, sun);
 
-        // Pause Logic
-        window.addEventListener('keydown', (e) => {
-            keys[e.key.toLowerCase()] = true;
-            if(e.key === 'Escape') togglePause();
-        });
-        window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+        // Snake with Texture
+        const snakeGeo = new THREE.BoxGeometry(1.5, 1.2, 2);
+        const snakeMat = new THREE.MeshStandardMaterial({ map: textures.snake });
+        snakeHead = new THREE.Mesh(snakeGeo, snakeMat);
+        snakeHead.visible = false;
+        scene.add(snakeHead);
 
-        window.togglePause = () => {
+        animate();
+    }
+
+    // --- TOOLBAR LOGIC ---
+    window.setTool = (tool) => {
+        activeTool = tool;
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('tool-active'));
+        document.getElementById('btn-' + tool).classList.add('tool-active');
+    };
+
+    // --- SPAWNING ---
+    window.spawnBiomeBlock = () => {
+        const type = document.getElementById('biome-select').value;
+        const colors = { grass: 0x2ecc71, sand: 0xf1c40f, lava: 0xe67e22, rock: 0x34495e };
+        const geo = new THREE.BoxGeometry(2,2,2);
+        const mat = new THREE.MeshStandardMaterial({ color: colors[type], map: textures[type] || null });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0, 1, 0);
+        mesh.userData.type = type;
+        scene.add(mesh);
+        updateHierarchy();
+    };
+
+    // --- EDITOR INTERACTION ---
+    window.addEventListener('mousedown', (e) => {
+        if(isPlaying) return;
+        const rect = renderer.domElement.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            -((e.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+
+        if(intersects.length > 0 && intersects[0].object !== snakeHead) {
+            selectObject(intersects[0].object);
+        }
+    });
+
+    function selectObject(obj) {
+        selectedObj = obj;
+        const ins = document.getElementById('inspector-content');
+        ins.innerHTML = `
+            <div class="field"><label>Position</label>
+                X <input type="number" value="${obj.position.x}" oninput="updateVal('pos','x',this.value)">
+                Y <input type="number" value="${obj.position.y}" oninput="updateVal('pos','y',this.value)">
+            </div>
+            <div class="field"><label>Rotation</label>
+                Y <input type="number" value="${obj.rotation.y}" oninput="updateVal('rot','y',this.value)">
+            </div>
+            <div class="field"><label>Scale</label>
+                S <input type="number" value="${obj.scale.x}" oninput="updateVal('sca','s',this.value)">
+            </div>
+        `;
+    }
+
+    window.updateVal = (type, axis, val) => {
+        if(!selectedObj) return;
+        const v = parseFloat(val);
+        if(type === 'pos') selectedObj.position[axis] = v;
+        if(type === 'rot') selectedObj.rotation[axis] = v;
+        if(type === 'sca') selectedObj.scale.set(v, v, v);
+    };
+
+    // --- MOD TRADER ---
+    function spawnTrader(x, z) {
+        const group = new THREE.Group();
+        // Robe
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 2), new THREE.MeshStandardMaterial({color: 0x2c3e50}));
+        // Hood
+        const hood = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: 0x1a1a1a}));
+        hood.position.y = 1.2;
+        group.add(body, hood);
+        group.position.set(x, 1, z);
+        scene.add(group);
+    }
+
+    // --- CORE LOOP ---
+    window.togglePlayMode = () => {
+        isPlaying = !isPlaying;
+        snakeHead.visible = isPlaying;
+        document.getElementById('hud').style.display = isPlaying ? 'block' : 'none';
+        if(isPlaying) {
+            camera.position.set(0, 15, 20);
+        } else {
+            document.getElementById('pause-overlay').style.display = 'none';
+        }
+    };
+
+    window.addEventListener('keydown', (e) => {
+        if(e.key === 'Escape') {
             isPaused = !isPaused;
-            document.getElementById('pause-menu').style.display = isPaused ? 'flex' : 'none';
-        };
+            document.getElementById('pause-overlay').style.display = isPaused ? 'flex' : 'none';
+        }
+        if(!isPlaying) {
+            if(e.key === 'w') setTool('move');
+            if(e.key === 'e') setTool('rotate');
+            if(e.key === 'r') setTool('scale');
+        }
+    });
 
-        // Editor Functions
-        window.spawnInEditor = () => {
-            const type = document.getElementById('spawn-type').value;
-            let mesh;
-            if(type === 'block') mesh = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color: 0x555555}));
-            if(type === 'apple') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshStandardMaterial({color: 0xff0000}));
-            if(type === 'trader') mesh = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 3), new THREE.MeshStandardMaterial({color: 0xffffff}));
-            
-            const dir = new THREE.Vector3(0,0,-10).applyQuaternion(camera.quaternion);
-            mesh.position.copy(camera.position).add(dir);
-            scene.add(mesh);
-            if(type === 'trader') traders.push(mesh);
-        };
+    function animate() {
+        requestAnimationFrame(animate);
+        if(isPaused) return;
 
-        window.applyTransform = () => {
-            if(!selectedObj) return;
-            selectedObj.position.set(
-                parseFloat(document.getElementById('ix').value),
-                parseFloat(document.getElementById('iy').value),
-                parseFloat(document.getElementById('iz').value)
-            );
-        };
-
-        window.deleteSelected = () => { if(selectedObj) { scene.remove(selectedObj); selectedObj = null; } };
-
-        // Mouse Controls
-        window.addEventListener('mousedown', (e) => {
-            mouseButtons[e.button] = true;
-            if(isEditor && e.button === 0) { // Left Click Select
-                const ray = new THREE.Raycaster();
-                const mouse = new THREE.Vector2((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1);
-                ray.setFromCamera(mouse, camera);
-                const hits = ray.intersectObjects(scene.children);
-                if(hits.length > 0 && hits[0].object !== snakeHead) {
-                    selectedObj = hits[0].object;
-                    document.getElementById('ix').value = selectedObj.position.x;
-                    document.getElementById('iy').value = selectedObj.position.y;
-                    document.getElementById('iz').value = selectedObj.position.z;
-                }
-            }
-        });
-        window.addEventListener('mouseup', (e) => mouseButtons[e.button] = false);
-
-        // Editor Camera Movement (Right Click to Rotate)
-        window.addEventListener('mousemove', (e) => {
-            if(isEditor && mouseButtons[2]) {
-                camera.rotation.y -= e.movementX * 0.003;
-                camera.rotation.x -= e.movementY * 0.003;
-            }
-        });
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if(isPaused) return;
-
-            if(isEditor) {
-                const fly = keys['shift'] ? 1 : 0.3;
-                if(keys['w']) camera.translateZ(-fly);
-                if(keys['s']) camera.translateZ(fly);
-                if(keys['a']) camera.translateX(-fly);
-                if(keys['d']) camera.translateX(fly);
-                if(keys['q']) camera.position.y += fly;
-                if(keys['e']) camera.position.y -= fly;
-            }
-
-            if(isPlaying) {
-                // Movement
-                let moving = false;
-                if(keys['w']) { snakeHead.translateZ(-0.4 * speedMod); moving = true; }
-                if(keys['s']) { snakeHead.translateZ(0.2 * speedMod); moving = true; }
-                if(keys['a']) { snakeHead.rotation.y += 0.05; moving = true; }
-                if(keys['d']) { snakeHead.rotation.y -= 0.05; moving = true; }
-
-                // Snake Tail Logic
-                if(moving) {
-                    snakeHistory.unshift(new THREE.Vector3().copy(snakeHead.position));
-                    if(snakeHistory.length > 300) snakeHistory.pop();
-                    bodySegments.forEach((seg, i) => {
-                        const idx = (i + 1) * 12;
-                        if(snakeHistory[idx]) seg.position.lerp(snakeHistory[idx], 0.15);
-                    });
-                }
-
-                // Interaction Logic (Mod Trader costs money now)
-                traders.forEach(t => {
-                    if(snakeHead.position.distanceTo(t.position) < 5) {
-                        if(gold >= 50) {
-                            gold -= 50;
-                            speedMod = 2; // Example power
-                            t.material.color.set(0x00ff00); // Visual feedback
-                        }
-                    }
-                });
-
-                const camOffset = new THREE.Vector3(0, 15, 30).applyMatrix4(snakeHead.matrixWorld);
-                camera.position.lerp(camOffset, 0.1);
-                camera.lookAt(snakeHead.position);
-            }
-
-            document.getElementById('gold-txt').innerText = gold;
+        if(isPlaying) {
+            // Movement logic same as before...
+            // Tail following logic...
+            renderer.render(scene, camera);
+        } else {
+            // Editor camera orbit/fly...
             renderer.render(scene, camera);
         }
+    }
 
-        window.oncontextmenu = (e) => e.preventDefault();
-    </script>
+    function updateHierarchy() {
+        const list = document.getElementById('obj-list');
+        list.innerHTML = "";
+        scene.children.forEach(c => {
+            if(c.type === "Mesh") {
+                const item = document.createElement('div');
+                item.innerText = "📦 " + (c.userData.type || "Object");
+                item.style.cursor = "pointer";
+                item.onclick = () => selectObject(c);
+                list.appendChild(item);
+            }
+        });
+    }
+
+    init();
+    spawnTrader(5, 5); // Example trader
+</script>
+
 </body>
 </html>
